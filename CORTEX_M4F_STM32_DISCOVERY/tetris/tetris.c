@@ -1,9 +1,18 @@
+#include <string.h>
+
 #include "stm32f429i_discovery.h"
 #include "stm32f429i_discovery_lcd.h"
 #include "stm32f429i_discovery_ioe.h"
 
 #define LCD_COLOR_GRAY		0xC618
 #define LCD_COLOR_ORANGE	0xFC00
+
+typedef struct BLOCK_T {
+	uint16_t x;
+	uint16_t y;
+	uint16_t type;
+	uint16_t direction;
+} BLOCK_T;
 
 enum BLOCK_TYPE {
 	BLOCK = -1,
@@ -17,7 +26,7 @@ enum BLOCK_TYPE {
 	TYPE_Z
 };
 
-static const uint16_t 
+static const uint16_t
 block_color[8] = {0,
                   LCD_COLOR_CYAN,
                   LCD_COLOR_BLUE,
@@ -74,19 +83,25 @@ static void LCDInit(void)
 	LCD_SetTextColor( LCD_COLOR_WHITE );
 }
 
-/* DrawBlock
+/* BlockDraw
  *   Screen size = 240 * 320
  *   Block size = 20 * 20
  *   Total block = 12 * 16
  *   Block index x from 0 to 11
  *   Block index y from 0 to 15
  */
-static void DrawBlock(uint16_t y, uint16_t x, uint16_t color)
+static void BlockDraw(uint16_t y, uint16_t x, uint16_t color)
 {
 	LCD_SetColors(LCD_COLOR_WHITE, LCD_COLOR_BLACK);
-	LCD_DrawFullRect(x * 20, 20 * y, 20, 20);
+	LCD_DrawFullRect(x * 20, y * 20, 20, 20);
 	LCD_SetColors(color, LCD_COLOR_BLACK);
-	LCD_DrawFullRect(x * 20 + 1, 20 * y + 1, 18, 18);
+	LCD_DrawFullRect(x * 20 + 1, y * 20 + 1, 18, 18);
+}
+
+static void BlockErase(uint16_t y, uint16_t x)
+{
+	LCD_SetColors(LCD_COLOR_BLACK, LCD_COLOR_BLACK);
+	LCD_DrawFullRect(x * 20, y * 20, 20, 200);
 }
 
 /* FieldInit
@@ -112,21 +127,25 @@ static void DrawBlock(uint16_t y, uint16_t x, uint16_t color)
 static void FieldInit(void)
 {
 	for(int i = 0; i < 15; i++) {
-		DrawBlock(i, 0, LCD_COLOR_GRAY);
-		DrawBlock(i, 11, LCD_COLOR_GRAY);
+		BlockDraw(i, 0, LCD_COLOR_GRAY);
+		BlockDraw(i, 11, LCD_COLOR_GRAY);
 		field[i][0] = BLOCK;
 		field[i][11] = BLOCK;
 
 		if(i < 12) {
-			DrawBlock(15, i, LCD_COLOR_GRAY);
+			BlockDraw(15, i, LCD_COLOR_GRAY);
 			field[15][i] = BLOCK;
 		}
 	}
 }
 
-static void BlockAdd(uint16_t y, uint16_t x, int type, int direction)
+static void BlockAdd(BLOCK_T block)
 {
 	uint16_t mask = 0x8000;
+	uint16_t y = block.y;
+	uint16_t x = block.x;
+	uint16_t type = block.type;
+	uint16_t direction = block.direction;
 
 	for(int i = 0; i < 4; i++) {
 		for(int j = 0; j < 4; j++) {
@@ -138,18 +157,67 @@ static void BlockAdd(uint16_t y, uint16_t x, int type, int direction)
 	}
 }
 
+static void BlockRemove(BLOCK_T block)
+{
+	uint16_t mask = 0x8000;
+	uint16_t y = block.y;
+	uint16_t x = block.x;
+	uint16_t type = block.type;
+	uint16_t direction = block.direction;
+
+	for(int i = 0; i < 4; i++) {
+		for(int j = 0; j < 4; j++) {
+			if(block_type[type][direction] & mask) {
+				field[y + i][x + j] = EMPTY;
+			}
+			mask >>= 1;
+		}
+	}
+}
+
+static void BlockNew(BLOCK_T *block)
+{
+	block->y = 0;
+	block->x = 3;
+	block->type = TYPE_I;
+	block->direction = 0;
+}
+
+static void UpdateScreen(void)
+{
+	for(int i = 0; i <= 14; i++) {
+		for(int j = 1; j <= 10; j++) {
+			if(field[i][j] == EMPTY) {
+				BlockErase(i, j);
+			}
+			else {
+				BlockDraw(i, j, block_color[field[i][j]]);
+			}
+		}
+	}
+}
+
 void TetrisInit(void)
 {
 	LCDInit();
 	FieldInit();
 }
 
-void TetrisUpdate(void)
+void TetrisGameLoop(void)
 {
-	for(int i = 0; i <= 14; i++) {
-		for(int j = 1; j <= 10; j++) {
-			if(field[i][j] == EMPTY) continue;
-			DrawBlock(i, j, block_color[field[i][j]]);
-		}
+	static BLOCK_T cur_block, last_block;
+	static falling = 0;
+
+	if(!falling) {
+		BlockNew(&cur_block);
+		falling = 1;
 	}
+
+	BlockRemove(last_block);
+	BlockAdd(cur_block);
+
+	UpdateScreen();
+
+	memcpy(&last_block, &cur_block, sizeof(BLOCK_T));
+	cur_block.y++;
 }
