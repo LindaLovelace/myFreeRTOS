@@ -17,7 +17,6 @@ enum BLOCK_TYPE {
 	TYPE_Z
 };
 
-static int field[12][16] = {0};
 static const uint16_t 
 block_color[8] = {0,
                   LCD_COLOR_CYAN,
@@ -27,6 +26,8 @@ block_color[8] = {0,
                   LCD_COLOR_GREEN,
                   LCD_COLOR_MAGENTA,
                   LCD_COLOR_RED};
+
+static int field[16][12] = {0};
 
 static void LCDInit(void)
 {
@@ -46,7 +47,7 @@ static void LCDInit(void)
  *   Block index x from 0 to 11
  *   Block index y from 0 to 15
  */
-static void DrawBlock(uint16_t x, uint16_t y, uint16_t color)
+static void DrawBlock(uint16_t y, uint16_t x, uint16_t color)
 {
 	LCD_SetColors(LCD_COLOR_WHITE, LCD_COLOR_BLACK);
 	LCD_DrawFullRect(x * 20, 20 * y, 20, 20);
@@ -77,14 +78,18 @@ static void DrawBlock(uint16_t x, uint16_t y, uint16_t color)
 static void FieldInit(void)
 {
 	for(int i = 0; i < 15; i++) {
-		DrawBlock(0, i, LCD_COLOR_GRAY);
-		DrawBlock(11, i, LCD_COLOR_GRAY);
-		field[0][i] = BLOCK;
-		field[11][i] = BLOCK;
+		DrawBlock(i, 0, LCD_COLOR_GRAY);
+		DrawBlock(i, 11, LCD_COLOR_GRAY);
+		field[i][0] = BLOCK;
+		field[i][11] = BLOCK;
 
 		if(i < 12) {
-			DrawBlock(i, 15, LCD_COLOR_GRAY);
-			field[i][15] = BLOCK;
+			DrawBlock(15, i, LCD_COLOR_GRAY);
+			field[15][i] = BLOCK;
+		}
+	}
+}
+
 		}
 	}
 }
@@ -97,8 +102,8 @@ void TetrisInit(void)
 
 void TetrisUpdate(void)
 {
-	for(int i = 1; i <= 10; i++) {
-		for(int j = 0; j <= 14; j++) {
+	for(int i = 0; i <= 14; i++) {
+		for(int j = 1; j <= 10; j++) {
 			if(field[i][j] == EMPTY) continue;
 			DrawBlock(i, j, block_color[field[i][j]]);
 		}
