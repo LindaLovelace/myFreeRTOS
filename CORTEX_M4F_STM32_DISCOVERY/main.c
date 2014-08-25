@@ -42,7 +42,8 @@
 void vUpdateTask(void *pvParameters)
 {
 	while(1) {
-
+		TetrisUpdate();
+		vTaskDelay(50);
 	}
 }
 
@@ -50,5 +51,9 @@ void vUpdateTask(void *pvParameters)
 int main( void )
 {
 	TetrisInit();
-	while(1);
+	
+	xTaskCreate( vUpdateTask, (signed char*) "vUpdateTask", 128, NULL, tskIDLE_PRIORITY + 1, NULL );
+
+	//Call Scheduler
+	vTaskStartScheduler();
 }

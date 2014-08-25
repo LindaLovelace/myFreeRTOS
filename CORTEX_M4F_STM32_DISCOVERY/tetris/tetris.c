@@ -2,7 +2,31 @@
 #include "stm32f429i_discovery_lcd.h"
 #include "stm32f429i_discovery_ioe.h"
 
-#define LCD_COLOR_GRAY	0xC618
+#define LCD_COLOR_GRAY		0xC618
+#define LCD_COLOR_ORANGE	0xFC00
+
+enum BLOCK_TYPE {
+	BLOCK = -1,
+	EMPTY,
+	TYPE_I = 1,
+	TYPE_J,
+	TYPE_L,
+	TYPE_O,
+	TYPE_S,
+	TYPE_T,
+	TYPE_Z
+};
+
+static int field[12][16] = {0};
+static const uint16_t 
+block_color[8] = {0,
+                  LCD_COLOR_CYAN,
+                  LCD_COLOR_BLUE,
+                  LCD_COLOR_ORANGE,
+                  LCD_COLOR_YELLOW,
+                  LCD_COLOR_GREEN,
+                  LCD_COLOR_MAGENTA,
+                  LCD_COLOR_RED};
 
 static void LCDInit(void)
 {
@@ -55,9 +79,12 @@ static void FieldInit(void)
 	for(int i = 0; i < 15; i++) {
 		DrawBlock(0, i, LCD_COLOR_GRAY);
 		DrawBlock(11, i, LCD_COLOR_GRAY);
+		field[0][i] = BLOCK;
+		field[11][i] = BLOCK;
 
 		if(i < 12) {
 			DrawBlock(i, 15, LCD_COLOR_GRAY);
+			field[i][15] = BLOCK;
 		}
 	}
 }
@@ -66,4 +93,14 @@ void TetrisInit(void)
 {
 	LCDInit();
 	FieldInit();
+}
+
+void TetrisUpdate(void)
+{
+	for(int i = 1; i <= 10; i++) {
+		for(int j = 0; j <= 14; j++) {
+			if(field[i][j] == EMPTY) continue;
+			DrawBlock(i, j, block_color[field[i][j]]);
+		}
+	}
 }
