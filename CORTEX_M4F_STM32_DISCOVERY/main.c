@@ -27,6 +27,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "tetris.h"
 
 #include <stdio.h>
 /** @addtogroup Template
@@ -38,7 +39,16 @@
 /* Private variables ---------------------------------------------------------*/
 /* Private function prototypes -----------------------------------------------*/
 
+void vUpdateTask(void *pvParameters)
+{
+	while(1) {
+
+	}
+}
+
 /* Main Function -------------------------------------------------------------*/
 int main( void )
 {
+	TetrisInit();
+	while(1);
 }

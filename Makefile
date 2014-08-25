@@ -1,4 +1,4 @@
-PROJECT = usart1
+PROJECT = tetris
 
 EXECUTABLE = $(PROJECT).elf
 BIN_IMAGE = $(PROJECT).bin
@@ -53,6 +53,7 @@ CFLAGS += -D"assert_param(expr)=((void)0)"
 #My own config
 OBJS += \
       $(PWD)/CORTEX_M4F_STM32_DISCOVERY/main.o \
+      $(PWD)/CORTEX_M4F_STM32_DISCOVERY/tetris/tetris.o \
       $(PWD)/CORTEX_M4F_STM32_DISCOVERY/startup/system_stm32f4xx.o \
       $(PWD)/CORTEX_M4F_STM32_DISCOVERY/stm32f4xx_it.o \
 
@@ -74,9 +75,15 @@ OBJS += \
     $(PWD)/CORTEX_M4F_STM32_DISCOVERY/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_syscfg.o \
     $(PWD)/CORTEX_M4F_STM32_DISCOVERY/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_i2c.o \
     $(PWD)/CORTEX_M4F_STM32_DISCOVERY/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_dma.o \
+    $(PWD)/CORTEX_M4F_STM32_DISCOVERY/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_dma2d.o \
+    $(PWD)/CORTEX_M4F_STM32_DISCOVERY/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_ltdc.o \
     $(PWD)/CORTEX_M4F_STM32_DISCOVERY/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_spi.o \
     $(PWD)/CORTEX_M4F_STM32_DISCOVERY/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_exti.o \
+    $(PWD)/CORTEX_M4F_STM32_DISCOVERY/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_fmc.o \
     $(PWD)/Utilities/STM32F429I-Discovery/stm32f429i_discovery.o \
+    $(PWD)/Utilities/STM32F429I-Discovery/stm32f429i_discovery_sdram.o \
+    $(PWD)/Utilities/STM32F429I-Discovery/stm32f429i_discovery_lcd.o \
+    $(PWD)/Utilities/STM32F429I-Discovery/stm32f429i_discovery_ioe.o \
     #$(PWD)/CORTEX_M4F_STM32_DISCOVERY/stm32f4xx_it.o
 
 CFLAGS += -DUSE_STDPERIPH_DRIVER
@@ -84,6 +91,7 @@ CFLAGS += -I $(PWD)/CORTEX_M4F_STM32_DISCOVERY \
 	  -I $(PWD)/include \
 	  -I $(PWD)/portable/GCC/ARM_CM4F \
 	  -I $(PWD)/CORTEX_M4F_STM32_DISCOVERY/board \
+	  -I $(PWD)/CORTEX_M4F_STM32_DISCOVERY/tetris \
 	  -I $(PWD)/CORTEX_M4F_STM32_DISCOVERY/Libraries/CMSIS/Device/ST/STM32F4xx/Include \
 	  -I $(PWD)/CORTEX_M4F_STM32_DISCOVERY/Libraries/CMSIS/Include \
 	  -I $(PWD)/CORTEX_M4F_STM32_DISCOVERY/Libraries/STM32F4xx_StdPeriph_Driver/inc \
