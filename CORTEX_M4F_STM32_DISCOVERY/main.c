@@ -1,6 +1,6 @@
 /**
   ******************************************************************************
-  * @file    Template/main.c 
+  * @file    Template/main.c
   * @author  MCD Application Team
   * @version V1.0.0
   * @date    20-September-2013
@@ -16,8 +16,8 @@
   *
   *        http://www.st.com/software_license_agreement_liberty_v2
   *
-  * Unless required by applicable law or agreed to in writing, software 
-  * distributed under the License is distributed on an "AS IS" BASIS, 
+  * Unless required by applicable law or agreed to in writing, software
+  * distributed under the License is distributed on an "AS IS" BASIS,
   * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
   * See the License for the specific language governing permissions and
   * limitations under the License.
@@ -32,18 +32,18 @@
 #include <stdio.h>
 /** @addtogroup Template
   * @{
-  */ 
+  */
 
 /* Private define ------------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 /* Private function prototypes -----------------------------------------------*/
 
-void vUpdateTask(void *pvParameters)
+void vGameLoopTask(void *pvParameters)
 {
 	while(1) {
-		TetrisUpdate();
-		vTaskDelay(50);
+		TetrisGameLoop();
+		vTaskDelay(20000);
 	}
 }
 
@@ -51,8 +51,8 @@ void vUpdateTask(void *pvParameters)
 int main( void )
 {
 	TetrisInit();
-	
-	xTaskCreate( vUpdateTask, (signed char*) "vUpdateTask", 128, NULL, tskIDLE_PRIORITY + 1, NULL );
+
+	xTaskCreate( vGameLoopTask, (signed char*) "GameLoop", 128, NULL, tskIDLE_PRIORITY + 1, NULL );
 
 	//Call Scheduler
 	vTaskStartScheduler();
