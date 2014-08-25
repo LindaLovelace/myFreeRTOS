@@ -101,7 +101,7 @@ static void BlockDraw(uint16_t y, uint16_t x, uint16_t color)
 static void BlockErase(uint16_t y, uint16_t x)
 {
 	LCD_SetColors(LCD_COLOR_BLACK, LCD_COLOR_BLACK);
-	LCD_DrawFullRect(x * 20, y * 20, 20, 200);
+	LCD_DrawFullRect(x * 20, y * 20, 20, 20);
 }
 
 /* FieldInit
