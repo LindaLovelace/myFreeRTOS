@@ -165,9 +165,14 @@ static void BlockRemove(BLOCK_T block)
 	uint16_t type = block.type;
 	uint16_t direction = block.direction;
 
+	if(type == EMPTY) {
+		return;
+	}
+
 	for(int i = 0; i < 4; i++) {
 		for(int j = 0; j < 4; j++) {
-			if(block_type[type][direction] & mask) {
+			if((block_type[type][direction] & mask)
+			   && (field[y + i][x + j] != BLOCK)) {
 				field[y + i][x + j] = EMPTY;
 			}
 			mask >>= 1;
@@ -180,7 +185,29 @@ static void BlockNew(BLOCK_T *block)
 	block->y = 0;
 	block->x = 3;
 	block->type = TYPE_I;
-	block->direction = 0;
+	block->direction = 1;
+}
+
+static int BlockReachBottom(BLOCK_T block)
+{
+	uint16_t mask = 0x8000;
+	uint16_t y = block.y;
+	uint16_t x = block.x;
+	uint16_t type = block.type;
+	uint16_t direction = block.direction;
+
+	for(int i = 0; i < 4; i++) {
+		for(int j = 0; j < 4; j++) {
+			if((block_type[type][direction] & mask)
+			   && (field[y + i + 1][x + j] != EMPTY)) {
+				return 1;
+			}
+
+			mask >>= 1;
+		}
+	}
+
+	return 0;
 }
 
 static void UpdateScreen(void)
@@ -205,15 +232,22 @@ void TetrisInit(void)
 
 void TetrisGameLoop(void)
 {
-	static BLOCK_T cur_block, last_block;
-	static falling = 0;
+	static BLOCK_T cur_block, last_block = {0};
+	static int falling = 0;
+
+	BlockRemove(last_block);
+
+	if(falling && BlockReachBottom(cur_block)) {
+		BlockAdd(cur_block);
+		falling = 0;
+	}
 
 	if(!falling) {
+		memset(&last_block, 0, sizeof(BLOCK_T));
 		BlockNew(&cur_block);
 		falling = 1;
 	}
 
-	BlockRemove(last_block);
 	BlockAdd(cur_block);
 
 	UpdateScreen();
