@@ -4,5 +4,6 @@
 void TetrisInit(void);
 void TetrisGameLoop(void);
 int TetrisTouchPanel(void);
+int TetrisL3GD20(void);
 
 #endif

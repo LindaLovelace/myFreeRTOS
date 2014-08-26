@@ -7,6 +7,7 @@
 #include "stm32f429i_discovery.h"
 #include "stm32f429i_discovery_lcd.h"
 #include "stm32f429i_discovery_ioe.h"
+#include "stm32f429i_discovery_l3gd20.h"
 
 #define DBG
 
@@ -132,6 +133,31 @@ static void USARTInit(void)
 	USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
 	USART_Init(USART1, &USART_InitStructure);
 	USART_Cmd(USART1, ENABLE);
+}
+
+static char* itoa(int value, char* result, int base)
+{
+	if (base < 2 || base > 36) {
+		*result = '\0';
+		return result;
+	}
+	char *ptr = result, *ptr1 = result, tmp_char;
+	int tmp_value;
+
+	do {
+		tmp_value = value;
+		value /= base;
+		*ptr++ = "zyxwvutsrqponmlkjihgfedcba9876543210123456789abcdefghijklmnopqrstuvwxyz" [35 + (tmp_value - value * base)];
+	} while (value);
+
+	if (tmp_value < 0) *ptr++ = '-';
+	*ptr-- = '\0';
+	while (ptr1 < ptr) {
+		tmp_char = *ptr;
+		*ptr-- = *ptr1;
+		*ptr1++ = tmp_char;
+	}
+	return result;
 }
 #endif
 
@@ -313,6 +339,27 @@ static void IOEInit(void)
 	//IOE_TPITConfig();
 }
 
+static void L3GD20Init(void)
+{
+	L3GD20_InitTypeDef L3GD20_InitStruct;
+
+	L3GD20_InitStruct.Power_Mode = L3GD20_MODE_ACTIVE;
+	L3GD20_InitStruct.Output_DataRate = L3GD20_OUTPUT_DATARATE_1;
+	L3GD20_InitStruct.Axes_Enable = L3GD20_AXES_ENABLE;
+	L3GD20_InitStruct.Band_Width = L3GD20_BANDWIDTH_4;
+	L3GD20_InitStruct.BlockData_Update = L3GD20_BlockDataUpdate_Continous;
+	L3GD20_InitStruct.Endianness = L3GD20_BLE_LSB;
+	L3GD20_InitStruct.Full_Scale = L3GD20_FULLSCALE_250;
+
+	L3GD20_Init(&L3GD20_InitStruct);
+
+	L3GD20_FilterConfigTypeDef L3GD20_FilterStructure;
+	L3GD20_FilterStructure.HighPassFilter_Mode_Selection = L3GD20_HPM_NORMAL_MODE_RES;
+	L3GD20_FilterStructure.HighPassFilter_CutOff_Frequency = L3GD20_HPFCF_0;
+	L3GD20_FilterConfig(&L3GD20_FilterStructure);
+	L3GD20_FilterCmd(L3GD20_HIGHPASSFILTER_ENABLE);
+}
+
 static void UpdateScreen(void)
 {
 	for(int i = 0; i <= 14; i++) {
@@ -335,6 +382,7 @@ void TetrisInit(void)
 	LCDInit();
 	FieldInit();
 	IOEInit();
+	L3GD20Init();
 
 	BlockNew(&cur_block);
 }
@@ -387,5 +435,74 @@ int TetrisTouchPanel(void)
 		return 1;
 	}
 
+	return 0;
+}
+
+int TetrisL3GD20(void)
+{
+	static float axis_y = 0;
+	static int countdown = 0;
+	BLOCK_T new_block;
+	uint8_t tmp[6] = {0};
+	int16_t a[3] = {0};
+	uint8_t tmpreg = 0;
+
+	L3GD20_Read(&tmpreg, L3GD20_CTRL_REG4_ADDR, 1);
+	L3GD20_Read(tmp, L3GD20_OUT_X_L_ADDR, 6);
+
+	/* check in the control register 4 the data alignment (Big Endian or Little Endian)*/
+	if (!(tmpreg & 0x40)) {
+		for (int i = 0; i < 3; i++) {
+			a[i] = (int16_t)(((uint16_t)tmp[2 * i + 1] << 8) | (uint16_t)tmp[2 * i]);
+			//axis_y += (float)a[i] * 0.00875F;
+			axis_y += (float)a[i] / 114.285F;
+		}
+	} else {
+		for (int i = 0; i < 3; i++) {
+			a[i] = (int16_t)(((uint16_t)tmp[2 * i] << 8) | (uint16_t)tmp[2 * i + 1]);
+			//axis_y += (float)a[i] * 0.00875F;
+			axis_y += (float)a[i] / 114.285F;
+		}
+	}
+
+	char tmpstr[16];
+	itoa((int)axis_y, tmpstr, 10);
+	dbg_puts(tmpstr);
+	if(axis_y >= 400) {
+		new_block.y = cur_block.y;
+		new_block.x = cur_block.x + 1;
+		new_block.type = cur_block.type;
+		new_block.direction = cur_block.direction;
+	}
+	else if(axis_y <= -400) {
+		new_block.y = cur_block.y;
+		new_block.x = cur_block.x - 1;
+		new_block.type = cur_block.type;
+		new_block.direction = cur_block.direction;
+	}
+	else {
+		return 0;
+	}
+
+	if(countdown--) {
+		return 0;
+	}
+
+	BlockRemove(last_block);
+	if(BlockCorrupt(new_block)) {
+		BlockAdd(last_block);
+	}
+	else {
+		countdown = 10;
+		BlockAdd(new_block);
+		memcpy(&cur_block, &new_block, sizeof(BLOCK_T));
+		UpdateScreen();
+	}
+
+	return 1;
+}
+
+uint32_t L3GD20_TIMEOUT_UserCallback(void)
+{
 	return 0;
 }

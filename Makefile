@@ -84,6 +84,7 @@ OBJS += \
     $(PWD)/Utilities/STM32F429I-Discovery/stm32f429i_discovery_sdram.o \
     $(PWD)/Utilities/STM32F429I-Discovery/stm32f429i_discovery_lcd.o \
     $(PWD)/Utilities/STM32F429I-Discovery/stm32f429i_discovery_ioe.o \
+    $(PWD)/Utilities/STM32F429I-Discovery/stm32f429i_discovery_l3gd20.o \
     #$(PWD)/CORTEX_M4F_STM32_DISCOVERY/stm32f4xx_it.o
 
 CFLAGS += -DUSE_STDPERIPH_DRIVER

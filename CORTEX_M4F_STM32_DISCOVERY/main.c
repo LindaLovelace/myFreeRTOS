@@ -56,6 +56,16 @@ void vGameTouchTask(void *pvParameters)
 	}
 }
 
+void vGameL3GD20(void *pvParameters)
+{
+	while(1) {
+		if(TetrisL3GD20()) {
+	//		vTaskDelay(5000);
+		}
+		vTaskDelay(5000);
+	}
+}
+
 /* Main Function -------------------------------------------------------------*/
 int main( void )
 {
@@ -63,6 +73,7 @@ int main( void )
 
 	xTaskCreate( vGameLoopTask, (signed char*) "GameLoop", 128, NULL, tskIDLE_PRIORITY + 2, NULL );
 	xTaskCreate( vGameTouchTask, (signed char*) "TouchPanel", 128, NULL, tskIDLE_PRIORITY + 1, NULL );
+	xTaskCreate( vGameL3GD20, (signed char*) "L3GD20", 128, NULL, tskIDLE_PRIORITY + 1, NULL );
 
 	//Call Scheduler
 	vTaskStartScheduler();
