@@ -78,7 +78,7 @@ block_type[8][4] = {{0, 0, 0, 0},
                     {0x0720, 0x0262, 0x04E0, 0x0464},
                     {0x0630, 0x0264, 0x0630, 0x0264}};
 
-static int field[16][12] = {0};
+static int field[16][12] = {{0}};
 static BLOCK_T cur_block = {0}, last_block = {0};
 
 #ifdef DBG
@@ -401,7 +401,6 @@ static void ClearLine(int y)
 
 static void CheckLine(void)
 {
-	char tmpbuf[16];
 	for(int i = 0; i <= 14; i++) {
 		for(int j = 1; j <= 10; j++) {
 			if(field[i][j] == EMPTY) {
@@ -445,7 +444,7 @@ void TetrisGameLoop(void)
 			UpdateScreen();
 
 			LCD_SetTextColor(LCD_COLOR_BLUE);
-			LCD_DisplayStringLine(LCD_LINE_0, "GameOver!");
+			LCD_DisplayStringLine(LCD_LINE_0, (unsigned char *)"GameOver!");
 			while(1);
 		}
 	}
@@ -483,7 +482,7 @@ int TetrisTouchPanel(void)
 	return 0;
 }
 
-int TetrisL3GD20(void)
+void TetrisL3GD20(void)
 {
 	static float axis_y = 0;
 	static int countdown = 0;
