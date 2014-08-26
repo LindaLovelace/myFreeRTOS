@@ -43,7 +43,16 @@ void vGameLoopTask(void *pvParameters)
 {
 	while(1) {
 		TetrisGameLoop();
-		vTaskDelay(20000);
+		vTaskDelay(50000);
+	}
+}
+
+void vGameTouchTask(void *pvParameters)
+{
+	while(1) {
+		if(TetrisTouchPanel()) {
+			vTaskDelay(10000);
+		}
 	}
 }
 
@@ -52,7 +61,8 @@ int main( void )
 {
 	TetrisInit();
 
-	xTaskCreate( vGameLoopTask, (signed char*) "GameLoop", 128, NULL, tskIDLE_PRIORITY + 1, NULL );
+	xTaskCreate( vGameLoopTask, (signed char*) "GameLoop", 128, NULL, tskIDLE_PRIORITY + 2, NULL );
+	xTaskCreate( vGameTouchTask, (signed char*) "TouchPanel", 128, NULL, tskIDLE_PRIORITY + 1, NULL );
 
 	//Call Scheduler
 	vTaskStartScheduler();

@@ -3,5 +3,6 @@
 
 void TetrisInit(void);
 void TetrisGameLoop(void);
+int TetrisTouchPanel(void);
 
 #endif

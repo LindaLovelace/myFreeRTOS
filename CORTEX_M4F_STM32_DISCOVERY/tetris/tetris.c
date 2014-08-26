@@ -305,6 +305,14 @@ static void FieldInit(void)
 	}
 }
 
+static void IOEInit(void)
+{
+	IOE_Config();
+
+	/* TODO: Use interrupt instead of polling */
+	//IOE_TPITConfig();
+}
+
 static void UpdateScreen(void)
 {
 	for(int i = 0; i <= 14; i++) {
@@ -326,6 +334,7 @@ void TetrisInit(void)
 #endif
 	LCDInit();
 	FieldInit();
+	IOEInit();
 
 	BlockNew(&cur_block);
 }
@@ -353,4 +362,30 @@ void TetrisGameLoop(void)
 	}
 
 	UpdateScreen();
+}
+
+int TetrisTouchPanel(void)
+{
+	BLOCK_T new_block;
+
+	if(IOE_TP_GetState()->TouchDetected) {
+		new_block.y = cur_block.y;
+		new_block.x = cur_block.x;
+		new_block.type = cur_block.type;
+		new_block.direction = cur_block.direction == 3 ? 0 : cur_block.direction + 1;
+
+		BlockRemove(last_block);
+		if(BlockCorrupt(new_block)) {
+			BlockAdd(last_block);
+		}
+		else {
+			BlockAdd(new_block);
+			memcpy(&cur_block, &new_block, sizeof(BLOCK_T));
+			UpdateScreen();
+		}
+
+		return 1;
+	}
+
+	return 0;
 }
