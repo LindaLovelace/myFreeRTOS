@@ -77,6 +77,7 @@ block_type[8][4] = {{0, 0, 0, 0},
                     {0x0630, 0x0264, 0x0630, 0x0264}};
 
 static int field[16][12] = {0};
+static BLOCK_T cur_block = {0}, last_block = {0};
 
 #ifdef DBG
 /** Debug Functions **/
@@ -197,12 +198,40 @@ static void BlockRemove(BLOCK_T block)
 	}
 }
 
-static void BlockNew(BLOCK_T *block)
+static int BlockCorrupt(BLOCK_T block)
+{
+	uint16_t mask = 0x8000;
+	uint16_t y = block.y;
+	uint16_t x = block.x;
+	uint16_t type = block.type;
+	uint16_t direction = block.direction;
+
+	for(int i = 0; i < 4; i++) {
+		for(int j = 0; j < 4; j++) {
+			if((block_type[type][direction] & mask)
+			   && (field[y + i][x + j] != EMPTY)
+			   && (field[y + i][x + j] != BLOCK)) {
+				return 1;
+			}
+			mask >>= 1;
+		}
+	}
+	return 0;
+}
+
+static int BlockNew(BLOCK_T *block)
 {
 	block->y = 0;
 	block->x = 3;
 	block->type = TYPE_I;
 	block->direction = 1;
+
+	/* Check corruption with existing block */
+	if(BlockCorrupt(*block)) {
+		return -1;
+	}
+
+	return 0;
 }
 
 static int BlockReachBottom(BLOCK_T block)
@@ -216,6 +245,8 @@ static int BlockReachBottom(BLOCK_T block)
 	for(int i = 0; i < 4; i++) {
 		for(int j = 0; j < 4; j++) {
 			if((block_type[type][direction] & mask)
+			   && !(block_type[type][direction] & mask >> 4
+			        && i != 3)
 			   && (field[y + i + 1][x + j] != EMPTY)) {
 				return 1;
 			}
@@ -290,33 +321,36 @@ static void UpdateScreen(void)
 
 void TetrisInit(void)
 {
+#ifdef DBG
 	USARTInit();
+#endif
 	LCDInit();
 	FieldInit();
+
+	BlockNew(&cur_block);
 }
 
 void TetrisGameLoop(void)
 {
-	static BLOCK_T cur_block, last_block = {0};
-	static int falling = 0;
-
 	BlockRemove(last_block);
-
-	if(falling && BlockReachBottom(cur_block)) {
-		BlockAdd(cur_block);
-		falling = 0;
-	}
-
-	if(!falling) {
-		memset(&last_block, 0, sizeof(BLOCK_T));
-		BlockNew(&cur_block);
-		falling = 1;
-	}
-
 	BlockAdd(cur_block);
 
-	UpdateScreen();
+	if(BlockReachBottom(cur_block)) {
+		last_block.type = EMPTY;
 
-	memcpy(&last_block, &cur_block, sizeof(BLOCK_T));
-	cur_block.y++;
+		if(BlockNew(&cur_block) == -1) {
+			BlockAdd(cur_block);
+			UpdateScreen();
+
+			LCD_SetTextColor(LCD_COLOR_BLUE);
+			LCD_DisplayStringLine(LCD_LINE_0, "GameOver!");
+			while(1);
+		}
+	}
+	else {
+		memcpy(&last_block, &cur_block, sizeof(BLOCK_T));
+		cur_block.y++;
+	}
+
+	UpdateScreen();
 }
