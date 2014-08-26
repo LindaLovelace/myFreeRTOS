@@ -1,5 +1,9 @@
 #include <string.h>
 
+#include "stm32f4xx_rcc.h"
+#include "stm32f4xx_gpio.h"
+#include "stm32f4xx_usart.h"
+
 #include "stm32f429i_discovery.h"
 #include "stm32f429i_discovery_lcd.h"
 #include "stm32f429i_discovery_ioe.h"
@@ -72,17 +76,17 @@ block_type[8][4] = {{0, 0, 0, 0},
 
 static int field[16][12] = {0};
 
-static void LCDInit(void)
+/* Debug Functions */
+static void dbg_puts(char *s)
 {
-	LCD_Init();
-	IOE_Config();
-	LTDC_Cmd( ENABLE );
-	LCD_LayerInit();
-	LCD_SetLayer( LCD_FOREGROUND_LAYER );
-	LCD_Clear( LCD_COLOR_BLACK );
-	LCD_SetTextColor( LCD_COLOR_WHITE );
+	while(*s) {
+		while(USART_GetFlagStatus(USART1, USART_FLAG_TXE) == RESET);
+		USART1_SendData(*s);
+		s++;
+	}
 }
 
+/* Block Operations */
 /* BlockDraw
  *   Screen size = 240 * 320
  *   Block size = 20 * 20
@@ -102,41 +106,6 @@ static void BlockErase(uint16_t y, uint16_t x)
 {
 	LCD_SetColors(LCD_COLOR_BLACK, LCD_COLOR_BLACK);
 	LCD_DrawFullRect(x * 20, y * 20, 20, 20);
-}
-
-/* FieldInit
- *   Surrounding block initilize
- *      0123456789AB
- *    0 X          X
- *    1 X          X
- *    2 X          X
- *    3 X          X
- *    4 X          X
- *    5 X          X
- *    6 X          X
- *    7 X          X
- *    8 X          X
- *    9 X          X
- *   10 X          X
- *   11 X          X
- *   12 X          X
- *   13 X          X
- *   14 X          X
- *   15 XXXXXXXXXXXX  X:Block
- */
-static void FieldInit(void)
-{
-	for(int i = 0; i < 15; i++) {
-		BlockDraw(i, 0, LCD_COLOR_GRAY);
-		BlockDraw(i, 11, LCD_COLOR_GRAY);
-		field[i][0] = BLOCK;
-		field[i][11] = BLOCK;
-
-		if(i < 12) {
-			BlockDraw(15, i, LCD_COLOR_GRAY);
-			field[15][i] = BLOCK;
-		}
-	}
 }
 
 static void BlockAdd(BLOCK_T block)
@@ -210,6 +179,100 @@ static int BlockReachBottom(BLOCK_T block)
 	return 0;
 }
 
+/* Internal Initialize Functions*/
+static void LCDInit(void)
+{
+	LCD_Init();
+	IOE_Config();
+	LTDC_Cmd( ENABLE );
+	LCD_LayerInit();
+	LCD_SetLayer( LCD_FOREGROUND_LAYER );
+	LCD_Clear( LCD_COLOR_BLACK );
+	LCD_SetTextColor( LCD_COLOR_WHITE );
+}
+
+static void USARTInit(void)
+{
+	/* --------------------------- System Clocks Configuration -----------------*/
+	/* USART1 clock enable */
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1, ENABLE);
+	/* GPIOA clock enable */
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
+
+	GPIO_InitTypeDef GPIO_InitStructure;
+	/*-------------------------- GPIO Configuration ----------------------------*/
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_9 | GPIO_Pin_10;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
+	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+	GPIO_Init(GPIOA, &GPIO_InitStructure);
+	/* Connect USART pins to AF */
+	GPIO_PinAFConfig(GPIOA, GPIO_PinSource9, GPIO_AF_USART1);   // USART1_TX
+	GPIO_PinAFConfig(GPIOA, GPIO_PinSource10, GPIO_AF_USART1);  // USART1_RX
+
+	USART_InitTypeDef USART_InitStructure;
+	/* USARTx configuration ------------------------------------------------------
+	*  USARTx configured as follow:
+	*  *  - BaudRate = 9600 baud
+	*  *  - Word Length = 8 Bits
+	*  *  - One Stop Bit
+	*  *  - No parity
+	*  *  - Hardware flow control disabled (RTS and CTS signals)
+	*  *  - Receive and transmit enabled
+	*/
+	USART_InitStructure.USART_BaudRate = 9600;
+	USART_InitStructure.USART_WordLength = USART_WordLength_8b;
+	USART_InitStructure.USART_StopBits = USART_StopBits_1;
+	USART_InitStructure.USART_Parity = USART_Parity_No;
+	USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
+	USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
+	USART_Init(USART1, &USART_InitStructure);
+	USART_Cmd(USART1, ENABLE);
+
+	char *test = "1234\n\r";
+	while(*test) {
+		while(USART_GetFlagStatus(USART1, USART_FLAG_TXE) == RESET);
+		USART_SendData(USART1, *test);
+		test++;
+	}
+}
+
+/* FieldInit
+ *   Surrounding block initialize
+ *      0123456789AB
+ *    0 X          X
+ *    1 X          X
+ *    2 X          X
+ *    3 X          X
+ *    4 X          X
+ *    5 X          X
+ *    6 X          X
+ *    7 X          X
+ *    8 X          X
+ *    9 X          X
+ *   10 X          X
+ *   11 X          X
+ *   12 X          X
+ *   13 X          X
+ *   14 X          X
+ *   15 XXXXXXXXXXXX  X:Block
+ */
+static void FieldInit(void)
+{
+	for(int i = 0; i < 15; i++) {
+		BlockDraw(i, 0, LCD_COLOR_GRAY);
+		BlockDraw(i, 11, LCD_COLOR_GRAY);
+		field[i][0] = BLOCK;
+		field[i][11] = BLOCK;
+
+		if(i < 12) {
+			BlockDraw(15, i, LCD_COLOR_GRAY);
+			field[15][i] = BLOCK;
+		}
+	}
+}
+
 static void UpdateScreen(void)
 {
 	for(int i = 0; i <= 14; i++) {
@@ -226,6 +289,7 @@ static void UpdateScreen(void)
 
 void TetrisInit(void)
 {
+	USARTInit();
 	LCDInit();
 	FieldInit();
 }
