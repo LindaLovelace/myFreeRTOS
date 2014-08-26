@@ -43,7 +43,7 @@ void vGameLoopTask(void *pvParameters)
 {
 	while(1) {
 		TetrisGameLoop();
-		vTaskDelay(50000);
+		vTaskDelay(80000);
 	}
 }
 

@@ -374,6 +374,37 @@ static void UpdateScreen(void)
 	}
 }
 
+static void ClearLine(int y)
+{
+	for(int i = y; i > 0; i--) {
+		for(int j = 1; j <= 10; j++) {
+			field[i][j] = field[i - 1][j];
+		}
+	}
+
+	for(int j = 1; j <= 10; j++) {
+		field[0][j] = EMPTY;
+	}
+}
+
+static void CheckLine(void)
+{
+	char tmpbuf[16];
+	for(int i = 0; i <= 14; i++) {
+		for(int j = 1; j <= 10; j++) {
+			if(field[i][j] == EMPTY) {
+				break;
+			}
+
+			if(j == 10) {
+				ClearLine(i);
+			}
+		}
+	}
+
+	UpdateScreen();
+}
+
 void TetrisInit(void)
 {
 #ifdef DBG
@@ -393,6 +424,7 @@ void TetrisGameLoop(void)
 	BlockAdd(cur_block);
 
 	if(BlockReachBottom(cur_block)) {
+		CheckLine();
 		last_block.type = EMPTY;
 
 		if(BlockNew(&cur_block) == -1) {
@@ -454,13 +486,11 @@ int TetrisL3GD20(void)
 	if (!(tmpreg & 0x40)) {
 		for (int i = 0; i < 3; i++) {
 			a[i] = (int16_t)(((uint16_t)tmp[2 * i + 1] << 8) | (uint16_t)tmp[2 * i]);
-			//axis_y += (float)a[i] * 0.00875F;
 			axis_y += (float)a[i] / 114.285F;
 		}
 	} else {
 		for (int i = 0; i < 3; i++) {
 			a[i] = (int16_t)(((uint16_t)tmp[2 * i] << 8) | (uint16_t)tmp[2 * i + 1]);
-			//axis_y += (float)a[i] * 0.00875F;
 			axis_y += (float)a[i] / 114.285F;
 		}
 	}
@@ -468,24 +498,24 @@ int TetrisL3GD20(void)
 	char tmpstr[16];
 	itoa((int)axis_y, tmpstr, 10);
 	dbg_puts(tmpstr);
-	if(axis_y >= 400) {
+	if(axis_y >= 300) {
 		new_block.y = cur_block.y;
 		new_block.x = cur_block.x + 1;
 		new_block.type = cur_block.type;
 		new_block.direction = cur_block.direction;
 	}
-	else if(axis_y <= -400) {
+	else if(axis_y <= -300) {
 		new_block.y = cur_block.y;
 		new_block.x = cur_block.x - 1;
 		new_block.type = cur_block.type;
 		new_block.direction = cur_block.direction;
 	}
 	else {
-		return 0;
+		return;
 	}
 
 	if(countdown--) {
-		return 0;
+		return;
 	}
 
 	BlockRemove(last_block);
@@ -493,13 +523,11 @@ int TetrisL3GD20(void)
 		BlockAdd(last_block);
 	}
 	else {
-		countdown = 10;
 		BlockAdd(new_block);
 		memcpy(&cur_block, &new_block, sizeof(BLOCK_T));
 		UpdateScreen();
 	}
-
-	return 1;
+	countdown = 10;
 }
 
 uint32_t L3GD20_TIMEOUT_UserCallback(void)
