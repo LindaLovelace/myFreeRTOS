@@ -3,6 +3,7 @@
 #include "stm32f4xx_rcc.h"
 #include "stm32f4xx_gpio.h"
 #include "stm32f4xx_usart.h"
+#include "stm32f4xx_rng.h"
 
 #include "stm32f429i_discovery.h"
 #include "stm32f429i_discovery_lcd.h"
@@ -247,9 +248,14 @@ static int BlockCorrupt(BLOCK_T block)
 
 static int BlockNew(BLOCK_T *block)
 {
+	uint32_t rnd;
+
+	while(!RNG_GetFlagStatus(RNG_FLAG_DRDY));
+	rnd = RNG_GetRandomNumber();
+
 	block->y = 0;
 	block->x = 3;
-	block->type = TYPE_I;
+	block->type = rnd % 7 + 1;
 	block->direction = 1;
 
 	/* Check corruption with existing block */
@@ -360,6 +366,12 @@ static void L3GD20Init(void)
 	L3GD20_FilterCmd(L3GD20_HIGHPASSFILTER_ENABLE);
 }
 
+static void RNGInit(void)
+{
+	RCC_AHB2PeriphClockCmd(RCC_AHB2Periph_RNG, ENABLE);
+	RNG_Cmd(ENABLE);
+}
+
 static void UpdateScreen(void)
 {
 	for(int i = 0; i <= 14; i++) {
@@ -414,6 +426,7 @@ void TetrisInit(void)
 	FieldInit();
 	IOEInit();
 	L3GD20Init();
+	RNGInit();
 
 	BlockNew(&cur_block);
 }
