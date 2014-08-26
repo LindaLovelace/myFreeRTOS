@@ -8,6 +8,8 @@
 #include "stm32f429i_discovery_lcd.h"
 #include "stm32f429i_discovery_ioe.h"
 
+#define DBG
+
 #define LCD_COLOR_GRAY		0xC618
 #define LCD_COLOR_ORANGE	0xFC00
 
@@ -76,17 +78,63 @@ block_type[8][4] = {{0, 0, 0, 0},
 
 static int field[16][12] = {0};
 
-/* Debug Functions */
+#ifdef DBG
+/** Debug Functions **/
 static void dbg_puts(char *s)
 {
 	while(*s) {
 		while(USART_GetFlagStatus(USART1, USART_FLAG_TXE) == RESET);
-		USART1_SendData(*s);
+		USART_SendData(USART1, *s);
 		s++;
 	}
+	while(USART_GetFlagStatus(USART1, USART_FLAG_TXE) == RESET);
+	USART_SendData(USART1, '\n');
+	while(USART_GetFlagStatus(USART1, USART_FLAG_TXE) == RESET);
+	USART_SendData(USART1, '\r');
 }
 
-/* Block Operations */
+static void USARTInit(void)
+{
+	/* --------------------------- System Clocks Configuration -----------------*/
+	/* USART1 clock enable */
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1, ENABLE);
+	/* GPIOA clock enable */
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
+
+	GPIO_InitTypeDef GPIO_InitStructure;
+	/*-------------------------- GPIO Configuration ----------------------------*/
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_9 | GPIO_Pin_10;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
+	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+	GPIO_Init(GPIOA, &GPIO_InitStructure);
+	/* Connect USART pins to AF */
+	GPIO_PinAFConfig(GPIOA, GPIO_PinSource9, GPIO_AF_USART1);   // USART1_TX
+	GPIO_PinAFConfig(GPIOA, GPIO_PinSource10, GPIO_AF_USART1);  // USART1_RX
+
+	USART_InitTypeDef USART_InitStructure;
+	/* USARTx configuration ------------------------------------------------------
+	*  USARTx configured as follow:
+	*  *  - BaudRate = 9600 baud
+	*  *  - Word Length = 8 Bits
+	*  *  - One Stop Bit
+	*  *  - No parity
+	*  *  - Hardware flow control disabled (RTS and CTS signals)
+	*  *  - Receive and transmit enabled
+	*/
+	USART_InitStructure.USART_BaudRate = 9600;
+	USART_InitStructure.USART_WordLength = USART_WordLength_8b;
+	USART_InitStructure.USART_StopBits = USART_StopBits_1;
+	USART_InitStructure.USART_Parity = USART_Parity_No;
+	USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
+	USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
+	USART_Init(USART1, &USART_InitStructure);
+	USART_Cmd(USART1, ENABLE);
+}
+#endif
+
+/** Block Operations **/
 /* BlockDraw
  *   Screen size = 240 * 320
  *   Block size = 20 * 20
@@ -189,53 +237,6 @@ static void LCDInit(void)
 	LCD_SetLayer( LCD_FOREGROUND_LAYER );
 	LCD_Clear( LCD_COLOR_BLACK );
 	LCD_SetTextColor( LCD_COLOR_WHITE );
-}
-
-static void USARTInit(void)
-{
-	/* --------------------------- System Clocks Configuration -----------------*/
-	/* USART1 clock enable */
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1, ENABLE);
-	/* GPIOA clock enable */
-	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
-
-	GPIO_InitTypeDef GPIO_InitStructure;
-	/*-------------------------- GPIO Configuration ----------------------------*/
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_9 | GPIO_Pin_10;
-	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
-	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-	GPIO_Init(GPIOA, &GPIO_InitStructure);
-	/* Connect USART pins to AF */
-	GPIO_PinAFConfig(GPIOA, GPIO_PinSource9, GPIO_AF_USART1);   // USART1_TX
-	GPIO_PinAFConfig(GPIOA, GPIO_PinSource10, GPIO_AF_USART1);  // USART1_RX
-
-	USART_InitTypeDef USART_InitStructure;
-	/* USARTx configuration ------------------------------------------------------
-	*  USARTx configured as follow:
-	*  *  - BaudRate = 9600 baud
-	*  *  - Word Length = 8 Bits
-	*  *  - One Stop Bit
-	*  *  - No parity
-	*  *  - Hardware flow control disabled (RTS and CTS signals)
-	*  *  - Receive and transmit enabled
-	*/
-	USART_InitStructure.USART_BaudRate = 9600;
-	USART_InitStructure.USART_WordLength = USART_WordLength_8b;
-	USART_InitStructure.USART_StopBits = USART_StopBits_1;
-	USART_InitStructure.USART_Parity = USART_Parity_No;
-	USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
-	USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
-	USART_Init(USART1, &USART_InitStructure);
-	USART_Cmd(USART1, ENABLE);
-
-	char *test = "1234\n\r";
-	while(*test) {
-		while(USART_GetFlagStatus(USART1, USART_FLAG_TXE) == RESET);
-		USART_SendData(USART1, *test);
-		test++;
-	}
 }
 
 /* FieldInit
