@@ -90,10 +90,12 @@ static void dbg_puts(char *s)
 		USART_SendData(USART1, *s);
 		s++;
 	}
+	/*
 	while(USART_GetFlagStatus(USART1, USART_FLAG_TXE) == RESET);
 	USART_SendData(USART1, '\n');
 	while(USART_GetFlagStatus(USART1, USART_FLAG_TXE) == RESET);
 	USART_SendData(USART1, '\r');
+	*/
 }
 
 static void USARTInit(void)
@@ -491,6 +493,8 @@ void TetrisL3GD20(void)
 	int16_t a[3] = {0};
 	uint8_t tmpreg = 0;
 
+	static float axis[3];
+
 	L3GD20_Read(&tmpreg, L3GD20_CTRL_REG4_ADDR, 1);
 	L3GD20_Read(tmp, L3GD20_OUT_X_L_ADDR, 6);
 
@@ -498,18 +502,34 @@ void TetrisL3GD20(void)
 	if (!(tmpreg & 0x40)) {
 		for (int i = 0; i < 3; i++) {
 			a[i] = (int16_t)(((uint16_t)tmp[2 * i + 1] << 8) | (uint16_t)tmp[2 * i]);
-			axis_y += (float)a[i] / 114.285F;
+			axis[i] = (float)a[i] / 114.285F;
 		}
 	} else {
 		for (int i = 0; i < 3; i++) {
 			a[i] = (int16_t)(((uint16_t)tmp[2 * i] << 8) | (uint16_t)tmp[2 * i + 1]);
-			axis_y += (float)a[i] / 114.285F;
+			axis[i] = (float)a[i] / 114.285F;
 		}
 	}
+	axis_y += axis[1];
 
+#ifdef DBG
 	char tmpstr[16];
+	dbg_puts("\033[2J\033[;H");
+	itoa((int)axis[0], tmpstr, 10);
+	dbg_puts("x = ");
+	dbg_puts(tmpstr);
+	itoa((int)axis[1], tmpstr, 10);
+	dbg_puts("\n\ry = ");
+	dbg_puts(tmpstr);
+	itoa((int)axis[2], tmpstr, 10);
+	dbg_puts("\n\rz = ");
+	dbg_puts(tmpstr);
+	dbg_puts("\n\raxis_y = ");
 	itoa((int)axis_y, tmpstr, 10);
 	dbg_puts(tmpstr);
+	dbg_puts("\n\r");
+#endif
+
 	if(axis_y >= 300) {
 		new_block.y = cur_block.y;
 		new_block.x = cur_block.x + 1;
